@@ -1,9 +1,21 @@
 import cv2
 import math
-import torch
 import numpy as np
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 from torch.optim.lr_scheduler import LambdaLR
+
+def flatten(x):
+    return x.view(x.size(0), -1)
+
+def global_average_pooling_2d(x, with_flatten=False):
+    x = F.avg_pool2d(x, kernel_size=(x.size(2), x.size(3)), padding=0)
+    if with_flatten:
+        x = flatten(x)
+    return x
 
 def one_hot_embedding(label, classes):
     """Embedding labels to one-hot form.

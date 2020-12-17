@@ -50,6 +50,7 @@ if __name__ == '__main__':
     experiment_name += '@pretrained={}'.format(args.pretrained)
     experiment_name += '@lr={}'.format(args.learning_rate)
     experiment_name += '@wd={}'.format(args.weight_decay)
+    experiment_name += '@bs={}'.format(args.batch_size)
     experiment_name += '@epoch={}'.format(args.max_epoches)
 
     model_dir = create_directory('./models/')
@@ -110,12 +111,11 @@ if __name__ == '__main__':
 
     if args.pretrained:
         if args.architecture == 'resnet38':
-            from core.resnet38d import convert_mxnet_to_torch
-            weights_dict = convert_mxnet_to_torch('./pretrained_models/ilsvrc-cls_rna-a1_cls1000_ep-0001.params')
+            weights_dict = torch.load('./pretrained_models/resnet-34.pth')
             model.load_state_dict(weights_dict, strict=False)
             print('[i] load model weights')
 
-    model = torch.nn.DataParallel(model).cuda()
+    model = model.cuda()
     model.train()
 
     train_timer = Timer()
@@ -151,7 +151,7 @@ if __name__ == '__main__':
                 valid_meter.add({'loss': loss.item()})
 
         model.train()
-        return valid_meter.clear(clear=True)
+        return valid_meter.get(clear=True)
 
     best_valid_loss = -1
 
@@ -162,7 +162,7 @@ if __name__ == '__main__':
         # for image, label in zip(images, labels):
         #     print(image.size(), label.size())
         # input()
-
+        
         logits = model(images)
         loss = class_loss_fn(logits, labels)
         

@@ -4,6 +4,8 @@ import torch.nn.functional as F
 
 from .resnet38d import Net
 
+from tools.torch_utils import flatten, global_average_pooling_2d
+
 class Classifier(Net):
     def __init__(self, classes):
         super().__init__()
@@ -16,18 +18,23 @@ class Classifier(Net):
         self.not_training = [self.conv1a, self.b2, self.b2_1, self.b2_2]
         self.from_scratch_layers = [self.fc8]
 
-
-    def forward(self, x):
+    def forward(self, x, with_cam=False):
         x = super().forward(x)
         x = self.dropout7(x)
 
-        x = F.avg_pool2d(
-            x, kernel_size=(x.size(2), x.size(3)), padding=0)
-
-        x = self.fc8(x)
-        x = x.view(x.size(0), -1)
-
-        return x
+        if not with_cam:
+            x = global_average_pooling_2d(x)
+            x = self.fc8(x)
+            return flatten(x)
+        else:
+            # CAM
+            x = self.fc8(x)
+            # features = F.relu(x) # I have to ablation study 
+            features = x
+            
+            # GAP
+            logits = global_average_pooling_2d(x, with_flatten=True)
+            return logits, features
 
     def forward_for_cam(self, x):
         x = super().forward(x)
