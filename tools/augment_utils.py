@@ -133,3 +133,20 @@ class Transpose2D:
         # h, w, c -> c, h, w
         return image.transpose((2, 0, 1))
 
+def denormalize_for_cam(cam, for_demo=False):
+    cam = cam.transpose((1, 2, 0))
+    _, _, classes = cam.shape
+    
+    for class_index in range(classes):
+        cam_per_class = cam[:, :, class_index]
+
+        min_value = np.min(cam_per_class)
+        max_value = np.max(cam_per_class)
+
+        cam[:, :, class_index] = (cam_per_class - min_value) / (max_value - min_value + 1e-5)
+        # print(class_index, cam.shape, cam_per_class.shape, min_value, max_value)
+    
+    if for_demo:
+        return (255 * cam).astype(np.uint8)
+    else:
+        return cam

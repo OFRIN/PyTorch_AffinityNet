@@ -1,4 +1,5 @@
 import os
+import cv2
 import glob
 import torch
 
@@ -43,6 +44,44 @@ class VOC_Dataset(torch.utils.data.Dataset):
         label = one_hot_embedding([self.class_dic[tag] for tag in tags], self.classes)
 
         return image, label
+
+class VOC_Dataset_with_Mask(torch.utils.data.Dataset):
+    def __init__(self, root_dir, txt_path, class_dic, transform=None):
+        self.root_dir = root_dir
+        self.image_dir = self.root_dir + 'JPEGImages/'
+        self.xml_dir = self.root_dir + 'Annotations/'
+        self.mask_dir = self.root_dir + 'SegmentationClass/'
+        
+        self.class_dic = class_dic
+        self.classes = len(self.class_dic.keys())
+
+        self.transform = transform
+
+        self.image_names = [image_name.strip() + '.jpg' for image_name in open(txt_path).readlines()]
+
+    def __len__(self):
+        return len(self.image_names)
+    
+    def __getitem__(self, index):
+        # preprocessing
+        image_id = self.image_names[index].replace('.jpg', '')
+        _, tags = read_xml(self.xml_dir + image_id + '.xml')
+
+        # open image and transform
+        image = Image.open(self.image_dir + image_id + '.jpg')
+
+        if len(np.shape(image)) == 2:
+            image = image.convert('RGB')
+        
+        if self.transform is not None:
+            image = self.transform(image)
+
+        # collect shape and tags
+        label = one_hot_embedding([self.class_dic[tag] for tag in tags], self.classes)
+        
+        mask = cv2.imread(self.mask_dir + image_id + '.png')
+        
+        return image_id, image, label, mask
 
 def color_map(N = 256):
     def bitget(byteval, idx):
